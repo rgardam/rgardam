@@ -249,7 +249,8 @@ Release plan: 2 of 9 services need a new release
 - **Deploying**: `task up:released` runs each service at its recorded
   version; after a release, only the released services' containers change.
 - **CI**: `.github/workflows/release.yml` shows the plan on every pull request
-  and, run by hand, releases the changed services to GHCR.
+  that touches this folder and, run by hand, releases the changed services to
+  GHCR.
 
 The plan needs no install and no network, and takes about half a second once
 its cache is warm. Details are in

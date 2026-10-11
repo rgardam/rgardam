@@ -321,8 +321,8 @@ The same tasks map onto CI without changes:
 1. `task install`, `task check` (type-check and unit tests).
 2. Work out which services changed since their last release and release only
    those: `task release:changed REGISTRY=...` (section 8).
-   `.github/workflows/release.yml` shows the plan on every pull request and
-   releases on demand.
+   `.github/workflows/release.yml` shows the plan on every pull request that
+   touches the project, and releases on demand.
 3. Persist BuildKit cache between runs, e.g.
    `DOCKER_BUILD_FLAGS="--cache-from type=registry,ref=<repo>:cache --cache-to type=registry,ref=<repo>:cache,mode=max"`
    (needs a buildx builder with the `docker-container` driver).
@@ -882,8 +882,8 @@ built.
 
 ### 8.4 CI
 
-`.github/workflows/release.yml` runs the plan on every pull request and puts
-it in the job summary; the job needs only Node.js and a checkout. Run by hand,
+`.github/workflows/release.yml` runs the plan on every pull request that
+touches `backstage-split-backends/` and puts it in the job summary; the job needs only Node.js and a checkout. Run by hand,
 it releases the changed services to GHCR, commits `deploy/releases.json` and
 pushes the tags. To release on every merge instead, trigger it on pushes to
 the main branch; the release job already skips when nothing changed. The plan
@@ -918,12 +918,14 @@ matrix with one job per service.
    `target` and a `match` rule.
 2. `deploy/catalog/platform.yaml`: `catalogSharding.self`, a database prefix,
    and its `catalog.locations` and `catalog.rules`.
-3. `docker-compose.yml`: a service from the `backend-catalog` image mounting
-   both files, like the existing shards.
-4. `gateway/default.conf.template`: an upstream and a line in each shard map,
-   for `?shard=platform`.
+3. `docker-compose.yml`: a service from the `backend-catalog` image like the
+   existing shards, mounting both files and `deploy/external-access.yaml`;
+   without that one, CI requests that reach the new shard fail.
+4. Restart the router and every shard: they read the topology at startup.
+5. Optionally, for `?shard=platform`: an upstream and a line in each shard map
+   in `gateway/default.conf.template`, which means a new gateway image.
 
-No image needs rebuilding.
+No catalog image needs rebuilding.
 
 **Adding a service**: a new `packages/<name>/Dockerfile` (with its
 `.dockerignore`) is picked up by the release plan on its own and released at
