@@ -84,9 +84,26 @@ function git(...args) {
   });
 }
 
-function gitShow(commit, path) {
+// Where this project sits in the git repository ('' at its root). It moved
+// from the root into its own folder, and older commits have it at the root.
+const prefix = git('rev-parse', '--show-prefix').trim();
+
+/** Whether the project was in its current folder at a commit */
+function inPlaceAt(commit) {
   try {
-    return git('show', `${commit}:${path}`);
+    git('cat-file', '-e', `${commit}:./package.json`);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/** A project file at a commit, from wherever the project was then */
+function gitShow(commit, path) {
+  const spec =
+    prefix && !inPlaceAt(commit) ? `${commit}:${path}` : `${commit}:./${path}`;
+  try {
+    return git('show', spec);
   } catch {
     return undefined;
   }
@@ -121,15 +138,21 @@ function listFiles(paths) {
   return [...new Set(files)].sort();
 }
 
-/** Files changed between a commit and the working tree, under some paths */
+/**
+ * Files changed between a commit and the working tree, under some paths.
+ * Unknown (undefined) for a commit from before the project moved into its
+ * folder: a diff would list every file as new.
+ */
 function changedSince(commit, paths) {
-  if (!commit || !commitExists(commit)) {
+  if (!commit || !commitExists(commit) || !inPlaceAt(commit)) {
     return undefined;
   }
   const split = text => text.split('\0').filter(Boolean);
   return [
     ...new Set([
-      ...split(git('diff', '--name-only', '-z', commit, '--', ...paths)),
+      ...split(
+        git('diff', '--name-only', '--relative', '-z', commit, '--', ...paths),
+      ),
       ...split(
         git('ls-files', '-z', '--others', '--exclude-standard', '--', ...paths),
       ),
@@ -478,7 +501,7 @@ class Workspace {
 
     if (current.inputs.source !== record.inputs?.source) {
       const files = known
-        ? changedSince(commit, current.sourcePaths).filter(file =>
+        ? changedSince(commit, current.sourcePaths)?.filter(file =>
             isBuilt(file, current.sourceDirs, current.imagePaths),
           )
         : undefined;
@@ -540,7 +563,9 @@ class Workspace {
         if (was !== value)
           details.push(`${arg} ${was ?? '(unset)'} → ${value}`);
       }
-      if (known) details.push(...changedSince(commit, current.imagePaths));
+      if (known) {
+        details.push(...(changedSince(commit, current.imagePaths) ?? []));
+      }
       reasons.push({
         kind: 'image',
         details,

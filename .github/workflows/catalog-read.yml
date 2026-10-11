@@ -2,8 +2,9 @@
 # secret. The same script runs locally with `task ci:read`, against the
 # stand-in token service.
 #
-# The Backstage deployment must trust GitHub's issuer (README, "CI access")
-# and be reachable from the runner, e.g. a self-hosted runner in its network.
+# The Backstage deployment must trust GitHub's issuer
+# (backstage-split-backends/README.md, "CI access") and be reachable from the
+# runner, e.g. a self-hosted runner in its network.
 name: Read the catalog
 
 on:
@@ -20,6 +21,10 @@ permissions:
   contents: read
   # Lets the job ask GitHub for an OIDC token (ACTIONS_ID_TOKEN_REQUEST_*)
   id-token: write
+
+defaults:
+  run:
+    working-directory: backstage-split-backends
 
 jobs:
   read:

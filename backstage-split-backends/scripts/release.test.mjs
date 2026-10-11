@@ -4,7 +4,7 @@
  * one kind of change at a time and checks exactly which services the plan
  * flags. Runs offline; the working copy is never touched.
  *
- *   node --test scripts/
+ *   node --test 'scripts/*.test.mjs'
  */
 import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
@@ -22,6 +22,11 @@ import { join, resolve } from 'node:path';
 import { after, before, test } from 'node:test';
 
 const repo = resolve(import.meta.dirname, '..');
+// The project's folder within the git repository ('' at its root)
+const prefix = execFileSync('git', ['rev-parse', '--show-prefix'], {
+  cwd: repo,
+  encoding: 'utf8',
+}).trim();
 const BACKENDS = [
   'backend-catalog',
   'backend-core',
@@ -31,13 +36,14 @@ const BACKENDS = [
   'backend-techdocs',
 ];
 let work;
+let project;
 
 function plan(env = {}) {
   const output = execFileSync(
     process.execPath,
     ['scripts/release.mjs', 'plan', '--json'],
     {
-      cwd: work,
+      cwd: project,
       encoding: 'utf8',
       maxBuffer: 64 * 1024 * 1024,
       env: {
@@ -57,7 +63,7 @@ function plan(env = {}) {
 // Changes made by a test case, undone after it
 const originals = new Map();
 function edit(file, change) {
-  const path = join(work, file);
+  const path = join(project, file);
   if (!originals.has(file)) {
     originals.set(file, existsSync(path) ? readFileSync(path) : null);
   }
@@ -72,8 +78,8 @@ function edit(file, change) {
 }
 function undo() {
   for (const [file, content] of originals) {
-    if (content === null) rmSync(join(work, file), { force: true });
-    else writeFileSync(join(work, file), content);
+    if (content === null) rmSync(join(project, file), { force: true });
+    else writeFileSync(join(project, file), content);
   }
   originals.clear();
 }
@@ -93,8 +99,9 @@ before(() => {
     cwd: repo,
     stdio: 'ignore',
   });
+  project = join(work, prefix);
   // Test the scripts as they are now, committed or not
-  cpSync(join(repo, 'scripts'), join(work, 'scripts'), { recursive: true });
+  cpSync(join(repo, 'scripts'), join(project, 'scripts'), { recursive: true });
 
   // Record every service as released from exactly this tree
   const baseline = plan();
@@ -111,7 +118,7 @@ before(() => {
     ]),
   );
   writeFileSync(
-    join(work, 'deploy', 'releases.json'),
+    join(project, 'deploy', 'releases.json'),
     `${JSON.stringify(manifest, null, 2)}\n`,
   );
 });

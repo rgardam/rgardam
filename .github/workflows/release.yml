@@ -1,5 +1,6 @@
 # Releases only the services whose inputs changed since their last release
-# (see "Releasing services independently" in docs/PLAN.md).
+# (see "Releasing services independently" in
+# backstage-split-backends/docs/PLAN.md).
 #
 # - On pull requests: computes the release plan and shows it in the job
 #   summary. Nothing is built.
@@ -12,6 +13,11 @@ name: Release changed services
 
 on:
   pull_request:
+    # The project lives in its own folder; nothing else in the repository
+    # goes into its images
+    paths:
+      - 'backstage-split-backends/**'
+      - '.github/workflows/release.yml'
   workflow_dispatch:
     inputs:
       bump:
@@ -22,6 +28,10 @@ on:
 
 permissions:
   contents: read
+
+defaults:
+  run:
+    working-directory: backstage-split-backends
 
 jobs:
   plan:
@@ -60,6 +70,7 @@ jobs:
         with:
           node-version: 22
           cache: yarn
+          cache-dependency-path: backstage-split-backends/yarn.lock
       - uses: arduino/setup-task@v2
         with:
           version: 3.x

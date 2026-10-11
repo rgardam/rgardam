@@ -532,7 +532,7 @@ flowchart LR
 Images carry their version, commit and fingerprint as labels
 (`org.opencontainers.image.version`, `org.opencontainers.image.revision`,
 `io.backstage-poc.inputs`). In CI
-([release.yml](../.github/workflows/release.yml)), every pull request shows
+([release.yml](../../.github/workflows/release.yml)), every pull request shows
 the plan in its job summary; running the workflow by hand builds and pushes
 the changed services to GitHub's container registry, commits the record and
 pushes the tags. A release replaces only its own containers: the other
