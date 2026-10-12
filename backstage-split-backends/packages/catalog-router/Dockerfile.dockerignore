@@ -1,3 +1,0 @@
-# Build context for packages/catalog-router/Dockerfile: only what it copies.
-*
-!packages/catalog-router/dist

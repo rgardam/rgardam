@@ -1,1 +1,0 @@
-export { ScorecardsPage } from './ScorecardsPage';
