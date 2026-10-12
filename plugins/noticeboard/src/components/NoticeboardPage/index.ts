@@ -1,1 +1,0 @@
-export { NoticeboardPage } from './NoticeboardPage';
